@@ -20,16 +20,6 @@ jobs:
           echo "Remotes configurados:"
           git remote -v
           git fetch upstream master
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          branch: "auto-update-${{ github.run_id }}"
-          base: ${{ env.BASE_BRANCH }}
-          title: "Auto Update: $(date +'%Y-%m-%d %H:%M')"
-          body: "Actualización automática desde fork\n\nCommit: ${{ github.sha }}"
-          labels: "automated"
           
       - name: Login to Docker Hub
         uses: docker/login-action@v2
