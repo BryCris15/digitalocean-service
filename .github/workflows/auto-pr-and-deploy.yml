@@ -2,7 +2,7 @@ name: Auto PR, Build and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   create-pr-and-deploy:
@@ -16,16 +16,16 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git remote add upstream https://github.com/${{ secrets.UPSTREAM_REPO }}.git
+          git remote https://github.com/BryCris15/digitalocean-service.git
           git fetch upstream
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
-          head: ${{ github.repository_owner }}:main
-          base: main 
-          repo: ${{ secrets.UPSTREAM_REPO }}
+          head: ${{ github.repository_owner }}:master
+          base: master
+          repo: BryCris15/digitalocean-service
           title: "Auto PR: Actualización desde fork"
           body: "Actualización automática desde fork. Docker image: stevxd97/digital_ocean:${{ github.sha }}"
           labels: "automated"
