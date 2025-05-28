@@ -5,7 +5,7 @@
       {
         "match": ".*",
         "isAsync": true,
-        "cmd": "git add . && git commit -m 'Auto-commit: ${fileBasename}' && git push origin main",
+        "cmd": "git add . && git commit -m 'Auto-commit: ${fileBasename}' && git push origin master",
         "runIn": "terminal"
       }
     ],
