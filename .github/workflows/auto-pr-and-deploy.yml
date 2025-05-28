@@ -24,14 +24,13 @@ jobs:
           git fetch upstream master
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GH_TOKEN }}
-          head: ${{ github.repository_owner }}:master
-          base: master
-          repo: BryCris15/digitalocean-service
-          title: "Auto PR: Actualización desde fork"
-          body: "Actualización automática desde fork. Docker image: stevxd97/digital_ocean:${{ github.sha }}"
+          branch: "auto-update-${{ github.run_id }}"
+          base: ${{ env.BASE_BRANCH }}
+          title: "Auto Update: $(date +'%Y-%m-%d %H:%M')"
+          body: "Actualización automática desde fork\n\nCommit: ${{ github.sha }}"
           labels: "automated"
           
       - name: Login to Docker Hub
