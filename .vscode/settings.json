@@ -1,0 +1,14 @@
+{
+  "files.autoSave": "onWindowChange",
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": ".*",
+        "isAsync": true,
+        "cmd": "git add . && git commit -m 'Auto-commit: ${fileBasename}' && git push origin main",
+        "runIn": "terminal"
+      }
+    ],
+    "runOn": ["onSave", "onClose"]
+  }
+}
