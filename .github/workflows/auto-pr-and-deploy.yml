@@ -2,7 +2,7 @@ name: Auto PR, Build and Deploy
 
 on:
   push:
-    branches: [ "master" ] 
+    branches: [ "master" ]
 
 jobs:
   create-pr-and-deploy:
@@ -11,53 +11,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  
+          fetch-depth: 0
+          ref: master
 
-      - name: Configure Git
+      - name: Setup Git Environment
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           
+          # Configurar upstream
           git remote add upstream https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/BryCris15/digitalocean-service.git
           
+          # Fetch completo
           git fetch --all
           
-          echo "=== RAMAS REMOTAS ==="
-          git branch -r
-          
-          if ! git show-ref --quiet refs/remotes/upstream/master; then
-            echo "::error::No se encontró upstream/master"
-            exit 1
+          # Debug: Ver ramas
+          echo "=== RAMAS ==="
+          git branch -av
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          # Comparación directa
+          if [ -z "$(git diff master upstream/master --shortstat)" ]; then
+            echo "::warning::No hay cambios entre tu master y upstream/master"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "::notice::Cambios detectados!"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "=== DIFF ==="
+            git diff master upstream/master --stat
           fi
 
       - name: Create Pull Request
-        id: pr-creator
+        if: steps.check-changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GH_TOKEN }}
-          branch: "autoupdate-${{ github.run_id }}" 
-          base: master
-          title: "Actualización automática - $(date +'%d/%m/%Y')"
+          branch: "auto-update-${{ github.run_number }}" 
+          base: master  
+          title: "Actualización automática - ${{ github.run_number }}"
           body: |
-            :robot: **Actualización automática** :arrows_counterclockwise:
-            
-            - **Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-            - **Imagen Docker:** stevxd97/digital_ocean:${{ github.sha }}
-            - **Ejecución:** [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          labels: "automated,ci"
-          commit-message: "chore: auto-update from fork"
-          delete-branch: true 
 
-      - name: Show PR Creation Status
-        if: steps.pr-creator.outputs.result != 'success'
-        run: |
-          echo "::error::No se creó el PR. Motivo: ${{ steps.pr-creator.outputs.result }}"
-          echo "=== DIFF CON UPSTREAM ==="
-          git diff origin/main..upstream/master --stat
-          echo "=== ÚLTIMOS COMMITS ==="
-          git log --oneline -n 5 origin/main
-          git log --oneline -n 5 upstream/master
-          exit 1
+            - **Origen:** [${{ github.repository }}@${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            - **Diferencias:**
+            ```diff
+            ${{ steps.check-changes.outputs.diff }}
+            ```
+          labels: "automated"
+          commit-message: "Auto-update: ${{ github.run_number }} [skip ci]"
           
       - name: Login to Docker Hub
         uses: docker/login-action@v2
