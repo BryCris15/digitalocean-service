@@ -2,74 +2,43 @@ name: Auto PR, Build and Deploy
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master" ]  # Cambiado a master para ambos repos
 
 jobs:
   create-pr-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
+      # Paso 1: Checkout del código
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: master
 
-      - name: Setup Git Environment
+      # Paso 2: Configurar Git
+      - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          
-          # Configurar upstream
-          git remote add upstream https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/BryCris15/digitalocean-service.git
-          
-          # Fetch completo
-          git fetch --all
-          
-          # Debug: Ver ramas
-          echo "=== RAMAS ==="
-          git branch -av
+          git remote add upstream https://github.com/BryCris15/digitalocean-service.git
+          git fetch upstream master
 
-      - name: Check for changes
-        id: check-changes
-        run: |
-          # Comparación directa
-          if [ -z "$(git diff master upstream/master --shortstat)" ]; then
-            echo "::warning::No hay cambios entre tu master y upstream/master"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "::notice::Cambios detectados!"
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "=== DIFF ==="
-            git diff master upstream/master --stat
-          fi
-
-      - name: Create Pull Request
-        if: steps.check-changes.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v5
+      # Paso 3: Crear Pull Request
+      - name: Open Pull Request
+        uses: rematocorp/open-pull-request-action@v1
         with:
-          token: ${{ secrets.GH_TOKEN }}
-          branch: "auto-update-${{ github.run_number }}" 
-          base: master  
-          title: "Actualización automática - ${{ github.run_number }}"
-          body: |
+          github-token: ${{ secrets.GH_TOKEN }}
+          from-branch: "master"  # Tu rama (en tu fork)
+          to-branch: "master"    # Rama en BryCris15/digitalocean-service
+          repository-owner: "BryCris15"
+          repository: "digitalocean-service"
+          pr-title: "Actualización automática - $(date +'%Y-%m-%d')"
+          pr-body: "Actualización automática desde fork. Commit: ${{ github.sha }}"
 
-            - **Origen:** [${{ github.repository }}@${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-            - **Diferencias:**
-            ```diff
-            ${{ steps.check-changes.outputs.diff }}
-            ```
-          labels: "automated"
-          commit-message: "Auto-update: ${{ github.run_number }} [skip ci]"
-          
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push Docker image
+      # Paso 4: Docker Build & Push
+      - name: Build and Push Docker Image
         run: |
           docker build -t stevxd97/digital_ocean:latest .
           docker tag stevxd97/digital_ocean:latest stevxd97/digital_ocean:${{ github.sha }}
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
           docker push stevxd97/digital_ocean:latest
           docker push stevxd97/digital_ocean:${{ github.sha }}
