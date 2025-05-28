@@ -1,38 +1,41 @@
-name: Auto PR, Build and Deploy
-
 on:
   push:
-    branches: [ "master" ]  # Cambiado a master para ambos repos
+    branches: [ "master" ]
 
 jobs:
   create-pr-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
-      # Paso 1: Checkout del código
+      # Paso 1: Checkout con todas las ramas
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: master
 
-      # Paso 2: Configurar Git
-      - name: Configure Git
+      # Paso 2: Configurar Git y crear rama temporal
+      - name: Prepare Git Environment
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git remote add upstream https://github.com/BryCris15/digitalocean-service.git
-          git fetch upstream master
+          
+          # Crear rama temporal con cambios
+          git checkout -b auto-update-${{ github.run_id }}
+          
+          # Hacer commit (simulando cambios)
+          touch update-$(date +%s).txt
+          git add .
+          git commit -m "Auto-update: ${{ github.sha }}"
 
       # Paso 3: Crear Pull Request
       - name: Open Pull Request
         uses: rematocorp/open-pull-request-action@v1
         with:
           github-token: ${{ secrets.GH_TOKEN }}
-          from-branch: "master"  # Tu rama (en tu fork)
-          to-branch: "master"    # Rama en BryCris15/digitalocean-service
+          from-branch: "auto-update-${{ github.run_id }}"  # Rama temporal
+          to-branch: "master"  # Rama destino
           repository-owner: "BryCris15"
           repository: "digitalocean-service"
-          pr-title: "Actualización automática - $(date +'%Y-%m-%d')"
-          pr-body: "Actualización automática desde fork. Commit: ${{ github.sha }}"
 
       # Paso 4: Docker Build & Push
       - name: Build and Push Docker Image
